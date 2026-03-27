@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlatherBox — Submit a Topic</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    body { max-width: 600px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+    .submit-logo { font-size: 1.8rem; font-weight: 900; text-align: center; margin-bottom: 0.25rem; }
+    .submit-logo span { color: var(--accent2); }
+
+    .guidance-box {
+      background: var(--surface);
+      border-left: 4px solid var(--accent2);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 0.9rem 1.2rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .guidance-box strong { color: var(--text); }
+
+    .clue-slots { display: flex; flex-direction: column; gap: 0.8rem; }
+
+    .clue-slot {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+    }
+    .clue-slot .slot-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .slot-num {
+      background: var(--surface2);
+      border-radius: 50%;
+      width: 1.4rem; height: 1.4rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .slot-starter {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .req-mark { color: var(--red); font-weight: 700; }
+    .opt-mark { color: var(--muted); font-size: 0.75rem; }
+
+    /* Success screen */
+    #success-screen {
+      text-align: center;
+      padding: 3rem 1rem;
+    }
+    #success-screen .big-check {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="form-screen">
+    <div class="submit-logo mb-2">Blather<span>Box</span></div>
+    <h2 class="text-center mb-1">Submit a Topic</h2>
+
+    <div class="guidance-box">
+      <strong>Tips:</strong> Start your clues vague and get more specific.
+      <strong>Never use the topic word</strong> in any clue — keep it a secret!
+    </div>
+
+    <form id="submit-form">
+      <div class="form-group">
+        <label>Your Name (optional)</label>
+        <input type="text" id="sub-name" placeholder="Anonymous" maxlength="40" autocorrect="off">
+      </div>
+
+      <div class="form-group">
+        <label>Topic <span class="req-mark">*</span></label>
+        <input type="text" id="sub-topic" placeholder="e.g. Toaster, Cleopatra, Paris…" maxlength="80"
+          required autocorrect="off" autocapitalize="words">
+        <span class="field-hint">What should players be guessing?</span>
+      </div>
+
+      <div class="form-group">
+        <label>Category <span class="req-mark">*</span></label>
+        <select id="sub-category" required>
+          <option value="">— Select a category —</option>
+          <option>Thing</option>
+          <option>Person</option>
+          <option>Place</option>
+          <option>Food/Drink</option>
+          <option>Activity</option>
+          <option>Movie/Show</option>
+        </select>
+      </div>
+
+      <div id="clue-section" class="hidden">
+        <h3 class="mb-2" style="font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">
+          Clues <span style="font-size:0.8rem;color:var(--muted);text-transform:none;letter-spacing:0;">(vague → specific)</span>
+        </h3>
+        <div class="clue-slots" id="clue-slots"></div>
+      </div>
+
+      <p id="form-error" class="text-red mt-2 hidden" style="font-size:0.9rem;"></p>
+
+      <button type="submit" class="btn btn-primary btn-lg btn-block mt-3" id="submit-btn">
+        Submit Topic
+      </button>
+    </form>
+
+    <div style="margin-top:2rem;text-align:center;">
+      <a href="/" class="text-muted" style="font-size:0.9rem;">← Back to Home</a>
+    </div>
+  </div>
+
+  <!-- Success -->
+  <div id="success-screen" class="hidden">
+    <div class="big-check">✅</div>
+    <h2>Topic Submitted!</h2>
+    <p class="text-muted mt-2 mb-3">Your topic is pending review and will appear in the game once approved.</p>
+    <button class="btn btn-primary" onclick="resetForm()">Submit Another</button>
+    <div class="mt-2">
+      <a href="/" class="text-muted" style="font-size:0.9rem;">← Back to Home</a>
+    </div>
+  </div>
+
+  <script src="/js/submit.js"></script>
+</body>
+</html>

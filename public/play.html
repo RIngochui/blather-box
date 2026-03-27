@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>BlatherBox — Play</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/phone.css">
+</head>
+<body class="phone-screen">
+
+  <!-- ── Waiting in lobby ── -->
+  <div class="phone-page" id="lobby-wait-screen">
+    <div class="phone-logo">Blather<span>Box</span></div>
+    <div class="joined-code">Room <strong id="lobby-code">----</strong></div>
+    <div class="waiting-indicator">
+      <div class="spinner"></div>
+      <p>Waiting for the host to start…</p>
+    </div>
+    <div class="my-score">Playing as <strong id="lobby-player-name" style="color:var(--text)"></strong></div>
+    <div class="player-list" id="lobby-player-list"></div>
+  </div>
+
+  <!-- ── Describer screen ── -->
+  <div class="phone-page hidden" id="describer-screen">
+    <div class="role-banner describer">
+      <div class="role-label">Your role</div>
+      <div class="role-name" style="color:var(--yellow)">Describer 🎤</div>
+    </div>
+
+    <div class="topic-reveal">
+      <div class="topic-label">Your topic</div>
+      <div class="topic-word" id="desc-topic-word">—</div>
+    </div>
+
+    <p class="text-muted mb-2" style="font-size:0.9rem;">
+      Read each clue aloud as it appears. <strong>No saying the topic word!</strong>
+    </p>
+
+    <div class="clue-list" id="desc-clue-list"></div>
+
+    <button class="btn btn-yellow btn-lg btn-block mt-2" id="next-clue-phone-btn"
+      style="background:var(--yellow);color:#000;">
+      Reveal Next Clue →
+    </button>
+    <p class="text-muted mt-1" style="text-align:center;font-size:0.85rem;" id="clue-progress-text"></p>
+  </div>
+
+  <!-- ── Guesser screen ── -->
+  <div class="phone-page hidden" id="guesser-screen">
+    <div class="role-banner guesser">
+      <div class="role-label">Your role</div>
+      <div class="role-name" style="color:var(--green)">Guesser 🔍</div>
+    </div>
+
+    <div class="category-display">
+      <div class="cat-label">Category</div>
+      <div class="cat-name" id="guesser-category">—</div>
+    </div>
+
+    <p class="text-muted text-center mb-2" style="font-size:0.9rem;">
+      Listen to <strong id="guesser-describer-name"></strong>'s clues and guess the topic!
+    </p>
+
+    <div class="clue-card" id="guesser-latest-clue" style="display:none;">
+      <div class="clue-num" id="guesser-clue-num">Clue 1</div>
+      <div class="clue-full">
+        <span class="starter" id="guesser-clue-starter"></span>
+        <span class="response" id="guesser-clue-response"></span>
+      </div>
+    </div>
+
+    <div class="guess-area">
+      <div class="guess-input-row">
+        <input type="text" id="guess-input" placeholder="Type your guess…"
+          autocomplete="off" autocorrect="off" autocapitalize="none"
+          spellcheck="false">
+        <button class="btn btn-green" id="guess-submit-btn">→</button>
+      </div>
+      <div class="guess-feedback" id="guess-feedback"></div>
+    </div>
+
+    <div class="my-score mt-2">Your score: <strong id="guesser-score">0</strong></div>
+  </div>
+
+  <!-- ── Round end ── -->
+  <div class="phone-page hidden" id="round-end-screen">
+    <div class="answer-card">
+      <div class="answer-label" id="round-end-title">Time's up!</div>
+      <div class="answer-word" id="round-end-answer">—</div>
+      <div class="text-muted mt-2" id="round-end-sub"></div>
+    </div>
+    <div class="waiting-indicator">
+      <div class="spinner"></div>
+      <p>Waiting for next round…</p>
+    </div>
+  </div>
+
+  <!-- ── Game over ── -->
+  <div class="phone-page hidden" id="gameover-screen">
+    <div class="phone-logo">Blather<span>Box</span></div>
+    <h2 class="text-center mt-2 mb-2">🎉 Final Scores</h2>
+    <div class="final-podium" id="final-podium"></div>
+    <a href="/" class="btn btn-primary btn-block mt-3">Play Again</a>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/play.js"></script>
+</body>
+</html>

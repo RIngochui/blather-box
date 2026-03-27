@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>BlatherBox — Join</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/phone.css">
+</head>
+<body class="phone-screen">
+  <div class="phone-page" id="join-page">
+    <div class="phone-logo">Blather<span>Box</span></div>
+    <p class="text-muted text-center mb-3">Enter your room code and name to join</p>
+
+    <div class="form-group">
+      <label>Room Code</label>
+      <input type="text" id="room-code-input" placeholder="ABCD" maxlength="4"
+        autocomplete="off" autocorrect="off" autocapitalize="characters"
+        spellcheck="false" style="font-size:2rem;font-family:monospace;text-align:center;letter-spacing:0.2em;text-transform:uppercase;">
+    </div>
+
+    <div class="form-group">
+      <label>Your Name</label>
+      <input type="text" id="player-name-input" placeholder="Enter your name" maxlength="20"
+        autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+    </div>
+
+    <p id="join-error" class="text-red mt-1 hidden" style="font-size:0.95rem;text-align:center;"></p>
+
+    <button class="btn btn-primary btn-lg btn-block mt-2" id="join-btn">Join Game</button>
+
+    <div style="margin-top:2rem;text-align:center;">
+      <a href="/" class="text-muted" style="font-size:0.9rem;">← Back</a>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/join.js"></script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlatherBox — Host</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/host.css">
+</head>
+<body class="host-screen">
+
+  <!-- Top bar -->
+  <header class="host-bar">
+    <div class="host-logo">Blather<span>Box</span></div>
+    <div class="room-code-display" id="room-code-bar" style="display:none">
+      <span class="label">Room Code</span>
+      <span class="code" id="room-code-val">----</span>
+    </div>
+    <div id="bar-status" style="color:var(--muted);font-size:0.9rem;"></div>
+  </header>
+
+  <main class="host-stage">
+
+    <!-- ── Create room ── -->
+    <div id="create-screen" class="text-center narrow">
+      <h1 style="font-size:3rem;margin-bottom:0.5rem;">Blather<span style="color:var(--accent2)">Box</span></h1>
+      <p class="text-muted mb-3">The party game where you blather the clues</p>
+      <button class="btn btn-primary btn-lg" id="create-btn">Create Room</button>
+    </div>
+
+    <!-- ── Lobby ── -->
+    <div id="lobby-screen" class="hidden">
+      <h2>Waiting for players…</h2>
+      <p class="join-url">Join at <strong id="join-url-display"></strong></p>
+      <div id="player-grid"></div>
+      <div class="host-controls">
+        <button class="btn btn-primary btn-lg" id="start-btn" disabled>Start Game</button>
+      </div>
+      <p class="text-muted mt-2" style="font-size:0.9rem;" id="player-count-hint">Need at least 2 players</p>
+    </div>
+
+    <!-- ── Round ── -->
+    <div id="round-screen" class="hidden">
+      <div class="round-header">
+        <div class="round-info">
+          <div class="info-pill">
+            <span class="pill-label">Round</span>
+            <span class="pill-val" id="round-number">1</span>
+          </div>
+          <div class="info-pill">
+            <span class="pill-label">Describer</span>
+            <span class="pill-val" id="describer-name">—</span>
+          </div>
+          <div class="category-badge" id="category-display">Thing</div>
+        </div>
+
+        <div class="timer-ring">
+          <svg viewBox="0 0 80 80" width="80" height="80">
+            <circle class="track" cx="40" cy="40" r="35"/>
+            <circle class="fill" id="timer-arc" cx="40" cy="40" r="35"/>
+          </svg>
+          <div class="timer-text" id="timer-text">60</div>
+        </div>
+      </div>
+
+      <div class="clue-stage" id="clue-stage">
+        <div class="clue-number" id="clue-number">Clue 1</div>
+        <div class="clue-text" id="clue-text">
+          <span class="starter" id="clue-starter"></span>
+          <span class="response" id="clue-response"></span>
+        </div>
+        <div class="clue-dots" id="clue-dots"></div>
+      </div>
+
+      <!-- Answer reveal overlay -->
+      <div id="answer-reveal-area" class="hidden" style="text-align:center;padding:1rem 0;">
+        <div style="color:var(--muted);font-size:1.1rem;margin-bottom:0.5rem;" id="round-end-reason"></div>
+        <div class="answer-reveal" id="answer-reveal-word"></div>
+      </div>
+
+      <div class="host-controls mt-3" id="round-controls">
+        <button class="btn btn-ghost" id="next-clue-btn">Next Clue →</button>
+        <button class="btn btn-red btn-sm" id="end-game-btn">End Game</button>
+      </div>
+    </div>
+
+    <!-- ── Scores ── -->
+    <div id="scores-screen" class="hidden">
+      <h2 id="scores-title">Scoreboard</h2>
+      <div class="score-list" id="score-list"></div>
+      <div class="host-controls mt-3">
+        <button class="btn btn-primary btn-lg" id="next-round-btn">Next Round</button>
+        <button class="btn btn-red" id="end-game-btn-2">End Game</button>
+      </div>
+    </div>
+
+    <!-- ── Game Over ── -->
+    <div id="gameover-screen" class="hidden" style="text-align:center;max-width:700px;width:100%;padding:2rem;">
+      <h1 style="font-size:3rem;margin-bottom:0.5rem;">🎉 Game Over!</h1>
+      <p class="text-muted mb-3">Final Standings</p>
+      <div class="score-list" id="final-score-list" style="max-width:600px;margin:0 auto 2rem;"></div>
+      <button class="btn btn-primary btn-lg" onclick="location.href='/'">Back to Home</button>
+    </div>
+
+  </main>
+
+  <!-- Correct guess flash -->
+  <div class="correct-flash hidden" id="correct-flash"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/host.js"></script>
+</body>
+</html>

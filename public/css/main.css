@@ -1,0 +1,208 @@
+/* ── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0f0f1a;
+  --surface:  #1c1c2e;
+  --surface2: #252540;
+  --accent:   #7c3aed;
+  --accent2:  #a855f7;
+  --green:    #22c55e;
+  --red:      #ef4444;
+  --yellow:   #eab308;
+  --text:     #f1f0ff;
+  --muted:    #9ca3af;
+  --border:   #374151;
+  --radius:   12px;
+  --shadow:   0 4px 24px rgba(0,0,0,0.4);
+}
+
+html { font-size: 16px; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+a { color: var(--accent2); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Typography ──────────────────────────────────────────── */
+h1 { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.75rem; font-weight: 700; }
+h3 { font-size: 1.25rem; font-weight: 600; }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1.4rem;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  text-align: center;
+}
+.btn:hover { opacity: 0.9; }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary   { background: var(--accent); color: #fff; }
+.btn-green     { background: var(--green); color: #fff; }
+.btn-red       { background: var(--red); color: #fff; }
+.btn-ghost     { background: var(--surface2); color: var(--text); }
+.btn-outline   { background: transparent; color: var(--accent2); border: 2px solid var(--accent2); }
+.btn-sm        { padding: 0.4rem 0.8rem; font-size: 0.85rem; }
+.btn-lg        { padding: 1rem 2rem; font-size: 1.2rem; border-radius: 16px; }
+.btn-block     { width: 100%; }
+
+/* ── Forms ───────────────────────────────────────────────── */
+.form-group { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+
+label { font-size: 0.9rem; font-weight: 600; color: var(--muted); }
+
+input[type="text"], input[type="password"], select, textarea {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent2);
+}
+input.error { border-color: var(--red); }
+
+.field-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.field-error {
+  font-size: 0.8rem;
+  color: var(--red);
+}
+
+/* ── Cards ───────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+/* ── Badges ──────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-pending  { background: #78350f; color: #fbbf24; }
+.badge-approved { background: #14532d; color: #4ade80; }
+.badge-rejected { background: #7f1d1d; color: #fca5a5; }
+
+/* ── Toast / Alert ───────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(4rem);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.8rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 0.95rem;
+  z-index: 9999;
+  transition: transform 0.3s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: var(--green); color: var(--green); }
+.toast.error   { border-color: var(--red);   color: var(--red);   }
+
+/* ── Centered layout helpers ─────────────────────────────── */
+.page-center {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.narrow { max-width: 480px; width: 100%; }
+.wide   { max-width: 900px; width: 100%; }
+
+/* ── Divider ─────────────────────────────────────────────── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.25rem 0;
+}
+
+/* ── Spinner ─────────────────────────────────────────────── */
+.spinner {
+  width: 2rem; height: 2rem;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin: auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes popIn {
+  0%   { transform: scale(0.8); opacity: 0; }
+  70%  { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.anim-slide-in { animation: slideIn 0.4s ease forwards; }
+.anim-fade-in  { animation: fadeIn 0.3s ease forwards; }
+.anim-pop-in   { animation: popIn 0.4s ease forwards; }
+
+/* ── Utilities ───────────────────────────────────────────── */
+.text-center  { text-align: center; }
+.text-muted   { color: var(--muted); }
+.text-green   { color: var(--green); }
+.text-red     { color: var(--red); }
+.text-yellow  { color: var(--yellow); }
+.text-accent  { color: var(--accent2); }
+.mt-1  { margin-top: 0.5rem; }
+.mt-2  { margin-top: 1rem; }
+.mt-3  { margin-top: 1.5rem; }
+.mb-1  { margin-bottom: 0.5rem; }
+.mb-2  { margin-bottom: 1rem; }
+.gap-1 { gap: 0.5rem; }
+.gap-2 { gap: 1rem; }
+.flex  { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.hidden { display: none !important; }

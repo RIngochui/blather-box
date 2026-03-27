@@ -1,0 +1,260 @@
+// ── Host / TV Screen ─────────────────────────────────────────────────────────
+
+const socket = io();
+
+const TOTAL_TIME = 60;
+let currentClueIndex = 0;
+let totalClues = 0;
+let timerInterval = null;
+let currentTimeLeft = TOTAL_TIME;
+
+// ── Screens ──────────────────────────────────────────────────────────────────
+const screens = {
+  create:    document.getElementById('create-screen'),
+  lobby:     document.getElementById('lobby-screen'),
+  round:     document.getElementById('round-screen'),
+  scores:    document.getElementById('scores-screen'),
+  gameover:  document.getElementById('gameover-screen'),
+};
+
+function showScreen(name) {
+  Object.values(screens).forEach(s => s.classList.add('hidden'));
+  screens[name].classList.remove('hidden');
+}
+
+// ── Elements ──────────────────────────────────────────────────────────────────
+const roomCodeVal       = document.getElementById('room-code-val');
+const roomCodeBar       = document.getElementById('room-code-bar');
+const joinUrlDisplay    = document.getElementById('join-url-display');
+const playerGrid        = document.getElementById('player-grid');
+const startBtn          = document.getElementById('start-btn');
+const playerCountHint   = document.getElementById('player-count-hint');
+
+const roundNumber       = document.getElementById('round-number');
+const describerName     = document.getElementById('describer-name');
+const categoryDisplay   = document.getElementById('category-display');
+const clueStage         = document.getElementById('clue-stage');
+const clueNumber        = document.getElementById('clue-number');
+const clueStarter       = document.getElementById('clue-starter');
+const clueResponse      = document.getElementById('clue-response');
+const clueDots          = document.getElementById('clue-dots');
+const timerArc          = document.getElementById('timer-arc');
+const timerText         = document.getElementById('timer-text');
+const nextClueBtn       = document.getElementById('next-clue-btn');
+const answerRevealArea  = document.getElementById('answer-reveal-area');
+const answerRevealWord  = document.getElementById('answer-reveal-word');
+const roundEndReason    = document.getElementById('round-end-reason');
+
+const scoreList         = document.getElementById('score-list');
+const scoresTitle       = document.getElementById('scores-title');
+const finalScoreList    = document.getElementById('final-score-list');
+
+// ── Socket events ─────────────────────────────────────────────────────────────
+
+socket.on('room-created', ({ code }) => {
+  roomCodeVal.textContent = code;
+  roomCodeBar.style.display = 'flex';
+  joinUrlDisplay.textContent = `${location.host}/join`;
+  showScreen('lobby');
+});
+
+socket.on('player-joined', ({ players, newPlayer }) => {
+  renderPlayerGrid(players);
+  if (players.length >= 2) {
+    startBtn.disabled = false;
+    playerCountHint.textContent = `${players.length} player${players.length > 1 ? 's' : ''} ready`;
+  } else {
+    playerCountHint.textContent = 'Need at least 2 players';
+  }
+});
+
+socket.on('player-left', ({ players }) => {
+  renderPlayerGrid(players);
+});
+
+socket.on('game-error', ({ message }) => {
+  alert(message);
+});
+
+socket.on('round-start', ({ role, topic, category, describerName: dn, clue, clueIndex, totalClues: tc, roundNumber: rn }) => {
+  if (role !== 'host') return;
+
+  currentClueIndex = clueIndex;
+  totalClues = tc;
+  roundNumber.textContent = rn;
+  describerName.textContent = dn;
+  categoryDisplay.textContent = category;
+
+  // Reset answer reveal
+  answerRevealArea.classList.add('hidden');
+  clueStage.classList.remove('hidden');
+  nextClueBtn.disabled = false;
+
+  // Render clue dots
+  renderClueDots(tc, 0);
+
+  // Show first clue (will also come via clue-revealed event)
+  // Already emitted from server
+
+  showScreen('round');
+  resetTimer();
+});
+
+socket.on('clue-revealed', ({ clueIndex, clue }) => {
+  currentClueIndex = clueIndex;
+  clueNumber.textContent = `Clue ${clueIndex + 1} of ${totalClues}`;
+  clueStarter.textContent = clue.starter + '… ';
+  clueResponse.textContent = clue.response;
+
+  // Animate in
+  const clueTextEl = document.getElementById('clue-text');
+  clueTextEl.classList.remove('anim-slide-in');
+  void clueTextEl.offsetWidth;
+  clueTextEl.classList.add('anim-slide-in');
+
+  updateClueDots(clueIndex);
+});
+
+socket.on('no-more-clues', () => {
+  nextClueBtn.disabled = true;
+  clueNumber.textContent = 'All clues revealed!';
+});
+
+socket.on('timer-tick', ({ timeLeft }) => {
+  currentTimeLeft = timeLeft;
+  updateTimerDisplay(timeLeft);
+});
+
+socket.on('correct-guess', ({ guesser, topic, guesserPoints, describerPoints, describerName: dn }) => {
+  showCorrectFlash();
+  showRoundEnd(`✓ ${guesser} got it!`, topic);
+  nextClueBtn.disabled = true;
+});
+
+socket.on('round-end', ({ reason, topic }) => {
+  const msg = reason === 'timeout' ? '⏰ Time\'s up!' : 'Round over';
+  showRoundEnd(msg, topic);
+  nextClueBtn.disabled = true;
+});
+
+socket.on('show-scores', ({ players, roundNumber: rn }) => {
+  scoresTitle.textContent = `After Round ${rn}`;
+  renderScoreList(scoreList, players);
+  showScreen('scores');
+});
+
+socket.on('game-end', ({ players }) => {
+  renderScoreList(finalScoreList, players);
+  showScreen('gameover');
+});
+
+socket.on('host-left', () => {
+  alert('Connection lost.');
+  location.href = '/';
+});
+
+// ── UI Actions ────────────────────────────────────────────────────────────────
+
+document.getElementById('create-btn').addEventListener('click', () => {
+  socket.emit('create-room');
+});
+
+startBtn.addEventListener('click', () => {
+  socket.emit('start-game');
+});
+
+nextClueBtn.addEventListener('click', () => {
+  socket.emit('next-clue');
+});
+
+document.getElementById('next-round-btn').addEventListener('click', () => {
+  socket.emit('next-round');
+});
+
+document.getElementById('end-game-btn').addEventListener('click', () => {
+  if (confirm('End the game now?')) socket.emit('end-game');
+});
+
+document.getElementById('end-game-btn-2').addEventListener('click', () => {
+  if (confirm('End the game now?')) socket.emit('end-game');
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function renderPlayerGrid(players) {
+  playerGrid.innerHTML = '';
+  players.forEach(p => {
+    const chip = document.createElement('div');
+    chip.className = 'player-chip';
+    chip.textContent = p.name;
+    playerGrid.appendChild(chip);
+  });
+}
+
+function renderClueDots(total, current) {
+  clueDots.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'clue-dot' + (i === current ? ' active' : '');
+    dot.id = `dot-${i}`;
+    clueDots.appendChild(dot);
+  }
+}
+
+function updateClueDots(current) {
+  document.querySelectorAll('.clue-dot').forEach((dot, i) => {
+    dot.className = 'clue-dot' + (i < current ? ' revealed' : i === current ? ' active' : '');
+  });
+}
+
+function resetTimer() {
+  currentTimeLeft = TOTAL_TIME;
+  updateTimerDisplay(TOTAL_TIME);
+}
+
+function updateTimerDisplay(timeLeft) {
+  timerText.textContent = timeLeft;
+  const circumference = 220; // 2π × r=35 ≈ 219.9
+  const fraction = timeLeft / TOTAL_TIME;
+  const offset = circumference * (1 - fraction);
+  timerArc.style.strokeDashoffset = offset;
+
+  const urgent = timeLeft <= 10;
+  timerArc.classList.toggle('urgent', urgent);
+  timerText.classList.toggle('urgent', urgent);
+}
+
+function showRoundEnd(reason, topicWord) {
+  clueStage.classList.add('hidden');
+  answerRevealArea.classList.remove('hidden');
+  roundEndReason.textContent = reason;
+  answerRevealWord.textContent = topicWord;
+  document.getElementById('round-controls').style.display = 'none';
+}
+
+function showCorrectFlash() {
+  const flash = document.getElementById('correct-flash');
+  flash.classList.remove('hidden');
+  setTimeout(() => flash.classList.add('hidden'), 1200);
+}
+
+function renderScoreList(container, players) {
+  container.innerHTML = '';
+  players.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'score-row';
+    row.style.setProperty('--i', i);
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const rankSymbol = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+    row.innerHTML = `
+      <div class="score-rank ${rankClass}">${rankSymbol}</div>
+      <div class="score-name">${esc(p.name)}</div>
+      <div class="score-pts">${p.score} pts</div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function esc(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlatherBox — Admin</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-screen">
+
+  <!-- Login overlay -->
+  <div id="login-overlay">
+    <div class="login-card">
+      <h2>Admin Dashboard</h2>
+      <p>Enter the admin password to continue</p>
+      <div class="form-group">
+        <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+      </div>
+      <p id="login-error" class="text-red mb-2 hidden" style="font-size:0.9rem;"></p>
+      <button class="btn btn-primary btn-block" id="login-btn">Sign In</button>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="admin-nav">
+    <div class="logo">Blather<span>Box</span> <span style="color:var(--muted);font-size:0.9rem;font-weight:400;">Admin</span></div>
+    <div style="display:flex;gap:0.75rem;align-items:center;">
+      <a href="/" style="color:var(--muted);font-size:0.85rem;">← Home</a>
+      <button class="btn btn-ghost btn-sm" id="logout-btn">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="admin-layout">
+
+    <!-- Stats bar -->
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat-card total">
+        <div class="stat-value" id="stat-total">—</div>
+        <div class="stat-label">Total</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-value" id="stat-pending">—</div>
+        <div class="stat-label">Pending</div>
+      </div>
+      <div class="stat-card approved">
+        <div class="stat-value" id="stat-approved">—</div>
+        <div class="stat-label">Approved</div>
+      </div>
+      <div class="stat-card rejected">
+        <div class="stat-value" id="stat-rejected">—</div>
+        <div class="stat-label">Rejected</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-row" id="tab-row">
+      <button class="tab-btn active" data-status="all">All</button>
+      <button class="tab-btn" data-status="pending">Pending</button>
+      <button class="tab-btn" data-status="approved">Approved</button>
+      <button class="tab-btn" data-status="rejected">Rejected</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="table-toolbar">
+      <span class="bulk-label"><span id="bulk-count">0</span> selected</span>
+      <button class="btn btn-green btn-sm" id="bulk-approve-btn" disabled>✓ Approve All</button>
+      <button class="btn btn-red btn-sm" id="bulk-reject-btn" disabled>✗ Reject All</button>
+      <button class="btn btn-ghost btn-sm" id="select-all-btn">Select All</button>
+    </div>
+
+    <!-- Table -->
+    <div class="topics-table-wrap">
+      <table class="topics-table" id="topics-table">
+        <thead>
+          <tr>
+            <th style="width:2rem;"><input type="checkbox" id="header-check"></th>
+            <th>Topic</th>
+            <th>Category</th>
+            <th>Clues</th>
+            <th>Submitted By</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="topics-tbody">
+          <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem;">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>

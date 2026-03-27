@@ -1,0 +1,274 @@
+/* ── Phone / Player screens ───────────────────────────────── */
+
+/* Bigger tap targets, generous spacing */
+body.phone-screen {
+  font-size: 18px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Page layouts */
+.phone-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 0 2rem;
+}
+
+.phone-logo {
+  font-size: 1.8rem;
+  font-weight: 900;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.phone-logo span { color: var(--accent2); }
+
+/* Code display on join */
+.joined-code {
+  font-size: 1rem;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.joined-code strong {
+  color: var(--accent2);
+  font-family: monospace;
+  font-size: 1.3rem;
+  letter-spacing: 0.1em;
+}
+
+/* Room code input — big cells */
+.code-input-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.code-cell {
+  flex: 1;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 900;
+  font-family: monospace;
+  padding: 0.75rem 0;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  outline: none;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.code-cell:focus { border-color: var(--accent2); }
+
+/* Waiting state */
+.waiting-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 2rem 0;
+}
+.waiting-indicator p {
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+/* Role banner */
+.role-banner {
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1rem 1.5rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.role-banner .role-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.role-banner .role-name {
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+.role-banner.describer { border-color: var(--yellow); }
+.role-banner.guesser   { border-color: var(--green); }
+
+/* Topic reveal (describer only) */
+.topic-reveal {
+  text-align: center;
+  margin: 1rem 0 1.5rem;
+}
+.topic-reveal .topic-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.topic-reveal .topic-word {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--yellow);
+  line-height: 1.1;
+}
+
+/* Clue card (describer) */
+.clue-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.clue-card .clue-num {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+.clue-card .clue-full {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.clue-card .clue-full .starter  { color: var(--muted); }
+.clue-card .clue-full .response { color: var(--accent2); font-weight: 700; }
+
+/* Clue list (all clues shown to describer) */
+.clue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+.clue-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  transition: opacity 0.3s;
+}
+.clue-item.current {
+  border-color: var(--accent2);
+  background: #1e1b38;
+}
+.clue-item.past { opacity: 0.45; }
+.clue-item .clue-starter  { color: var(--muted); }
+.clue-item .clue-response { color: var(--accent2); font-weight: 700; }
+
+/* Category display (guesser) */
+.category-display {
+  text-align: center;
+  margin: 1rem 0 1.5rem;
+}
+.category-display .cat-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.category-display .cat-name {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--accent2);
+}
+
+/* Guess input */
+.guess-area {
+  margin-top: auto;
+  padding-top: 1rem;
+}
+.guess-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.guess-input-row input {
+  flex: 1;
+  font-size: 1.2rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+}
+.guess-input-row .btn {
+  padding: 0.9rem 1.2rem;
+  border-radius: 12px;
+  font-size: 1.2rem;
+}
+
+.guess-feedback {
+  text-align: center;
+  min-height: 1.5rem;
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+.guess-feedback.wrong  { color: var(--red);   }
+.guess-feedback.correct { color: var(--green); }
+
+/* Score display (per-player) */
+.my-score {
+  text-align: center;
+  padding: 0.5rem 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.my-score strong { color: var(--accent2); font-size: 1.2rem; }
+
+/* Player list (lobby on phone) */
+.player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+.player-list-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  animation: slideIn 0.3s ease forwards;
+}
+
+/* Round-end / answer reveal */
+.answer-card {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+.answer-card .answer-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.answer-card .answer-word {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--yellow);
+  margin: 0.5rem 0;
+}
+
+/* Final scoreboard */
+.final-podium {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+.podium-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border);
+}
+.podium-rank { font-size: 1.2rem; font-weight: 800; width: 1.8rem; color: var(--muted); }
+.podium-rank.gold   { color: #fbbf24; }
+.podium-rank.silver { color: #94a3b8; }
+.podium-rank.bronze { color: #d97706; }
+.podium-name { flex: 1; font-weight: 700; font-size: 1.1rem; }
+.podium-pts  { font-size: 1.2rem; font-weight: 900; color: var(--accent2); }
