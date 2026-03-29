@@ -4,7 +4,6 @@ let adminPassword = '';
 let currentStatus = 'all';
 let allTopics = [];
 let selectedIds = new Set();
-let clueTemplates = {};
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -13,7 +12,6 @@ const loginPassword = document.getElementById('login-password');
 const loginBtn      = document.getElementById('login-btn');
 const loginError    = document.getElementById('login-error');
 
-// Check sessionStorage for saved password
 const saved = sessionStorage.getItem('bb_admin_pass');
 if (saved) {
   adminPassword = saved;
@@ -59,9 +57,6 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 async function init() {
-  // Load clue templates
-  const r = await fetch('/api/game/clue-templates');
-  clueTemplates = await r.json();
   await loadStats();
   await loadTopics();
 }
@@ -101,6 +96,12 @@ async function loadTopics() {
   updateBulkUI();
 }
 
+function parseAliases(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  try { return JSON.parse(raw); } catch { return []; }
+}
+
 function renderTable() {
   const tbody = document.getElementById('topics-tbody');
   if (!allTopics.length) {
@@ -112,20 +113,15 @@ function renderTable() {
   allTopics.forEach(topic => {
     const tr = document.createElement('tr');
     tr.dataset.id = topic.id;
-
-    const clues = typeof topic.clues === 'string' ? JSON.parse(topic.clues) : topic.clues;
-    const clueHtml = clues
-      .filter(c => c.response && c.response.trim())
-      .map(c => `<span class="clue-line"><span class="clue-starter">${esc(c.starter)}… </span><span class="clue-response">${esc(c.response)}</span></span>`)
-      .join('');
-
     const date = new Date(topic.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+    const aliases = parseAliases(topic.aliases);
+    const aliasText = aliases.length ? aliases.join(', ') : '—';
 
     tr.innerHTML = `
       <td><input type="checkbox" class="row-check" data-id="${topic.id}" ${selectedIds.has(topic.id) ? 'checked' : ''}></td>
       <td class="topic-name">${esc(topic.topic)}</td>
       <td>${esc(topic.category)}</td>
-      <td class="clues-col"><div class="clue-assembled">${clueHtml}</div></td>
+      <td style="color:var(--muted);font-size:0.85rem;">${esc(aliasText)}</td>
       <td><div class="topic-meta">${esc(topic.submitted_by)}</div></td>
       <td><div class="topic-meta">${date}</div></td>
       <td><span class="badge badge-${topic.status}">${topic.status}</span></td>
@@ -139,7 +135,6 @@ function renderTable() {
     tbody.appendChild(tr);
   });
 
-  // Bind row checkboxes
   tbody.querySelectorAll('.row-check').forEach(cb => {
     cb.addEventListener('change', () => {
       const id = parseInt(cb.dataset.id);
@@ -149,7 +144,6 @@ function renderTable() {
     });
   });
 
-  // Bind action buttons
   tbody.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', () => handleAction(btn.dataset.action, parseInt(btn.dataset.id)));
   });
@@ -186,13 +180,11 @@ async function handleAction(action, id) {
 }
 
 function openInlineEdit(id) {
-  // Close any existing edit rows
   document.querySelectorAll('.edit-row').forEach(r => r.remove());
   document.querySelectorAll('tr.editing').forEach(r => r.classList.remove('editing'));
 
   const topic = allTopics.find(t => t.id === id);
   if (!topic) return;
-  const clues = typeof topic.clues === 'string' ? JSON.parse(topic.clues) : topic.clues;
 
   const sourceRow = document.querySelector(`tr[data-id="${id}"]`);
   if (!sourceRow) return;
@@ -200,21 +192,11 @@ function openInlineEdit(id) {
 
   const editRow = document.createElement('tr');
   editRow.className = 'edit-row';
-
-  // Build clue fields
-  const clueFields = clues.map((c, i) => `
-    <div class="edit-clue-field">
-      <span class="starter-label">${esc(c.starter)}…</span>
-      <input type="text" class="edit-clue-response" data-clue-index="${i}"
-        value="${esc(c.response)}" placeholder="${c.required ? 'Required' : 'Optional'}"
-        autocorrect="off" autocapitalize="none" spellcheck="false">
-    </div>
-  `).join('');
-
+  const currentAliases = parseAliases(topic.aliases);
   editRow.innerHTML = `
     <td colspan="8">
       <div class="inline-edit-form">
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;">
           <div style="flex:1;min-width:160px;">
             <label style="font-size:0.8rem;color:var(--muted);">Topic</label>
             <input type="text" id="edit-topic-input" value="${esc(topic.topic)}" autocorrect="off" autocapitalize="words">
@@ -228,7 +210,12 @@ function openInlineEdit(id) {
             </select>
           </div>
         </div>
-        <div id="edit-clue-fields">${clueFields}</div>
+        <div style="margin-top:0.75rem;">
+          <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:0.4rem;">
+            Alternate Names — guessers can type any of these to win
+          </label>
+          <div class="alias-tag-editor" id="alias-tag-editor"></div>
+        </div>
         <div class="edit-actions">
           <button class="btn btn-primary btn-sm" id="save-edit-btn">Save</button>
           <button class="btn btn-ghost btn-sm" id="cancel-edit-btn">Cancel</button>
@@ -239,25 +226,79 @@ function openInlineEdit(id) {
 
   sourceRow.insertAdjacentElement('afterend', editRow);
 
-  document.getElementById('cancel-edit-btn').addEventListener('click', () => {
+  // ── Alias tag editor ──────────────────────────────────────────────────────
+  const tagEditor = editRow.querySelector('#alias-tag-editor');
+  let editAliases = [...currentAliases];
+
+  function renderTagEditor() {
+    tagEditor.innerHTML = '';
+    editAliases.forEach((alias, i) => {
+      const tag = document.createElement('span');
+      tag.className = 'alias-tag';
+      tag.innerHTML = `${esc(alias)}<button class="alias-tag-remove" data-i="${i}" title="Remove">×</button>`;
+      tagEditor.appendChild(tag);
+    });
+    // Add input
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'alias-tag-input';
+    input.placeholder = 'Type alias, press Enter…';
+    input.autocorrect = 'off';
+    input.autocapitalize = 'words';
+    input.spellcheck = false;
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        const val = input.value.trim().replace(/,$/, '');
+        if (val && !editAliases.map(a => a.toLowerCase()).includes(val.toLowerCase())) {
+          editAliases.push(val);
+          renderTagEditor();
+        } else {
+          input.value = '';
+        }
+      } else if (e.key === 'Backspace' && input.value === '' && editAliases.length) {
+        editAliases.pop();
+        renderTagEditor();
+      }
+    });
+    tagEditor.appendChild(input);
+
+    // Remove buttons
+    tagEditor.querySelectorAll('.alias-tag-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        editAliases.splice(parseInt(btn.dataset.i), 1);
+        renderTagEditor();
+      });
+    });
+
+    // Click anywhere in the editor to focus input
+    tagEditor.addEventListener('click', () => input.focus());
+  }
+
+  renderTagEditor();
+
+  // ── Save / Cancel ─────────────────────────────────────────────────────────
+  editRow.querySelector('#cancel-edit-btn').addEventListener('click', () => {
     editRow.remove();
     sourceRow.classList.remove('editing');
   });
 
-  document.getElementById('save-edit-btn').addEventListener('click', async () => {
-    const newTopic    = document.getElementById('edit-topic-input').value.trim();
-    const newCategory = document.getElementById('edit-category-select').value;
-    const newClueInputs = editRow.querySelectorAll('.edit-clue-response');
-    const newClues = clues.map((c, i) => ({
-      ...c,
-      response: newClueInputs[i] ? newClueInputs[i].value.trim() : c.response
-    }));
-
+  editRow.querySelector('#save-edit-btn').addEventListener('click', async () => {
+    const newTopic    = editRow.querySelector('#edit-topic-input').value.trim();
+    const newCategory = editRow.querySelector('#edit-category-select').value;
+    // Also grab anything partially typed in the alias input
+    const partialInput = tagEditor.querySelector('.alias-tag-input');
+    if (partialInput && partialInput.value.trim()) {
+      const val = partialInput.value.trim();
+      if (!editAliases.map(a => a.toLowerCase()).includes(val.toLowerCase())) {
+        editAliases.push(val);
+      }
+    }
     if (!newTopic) { alert('Topic cannot be empty.'); return; }
 
     await authFetch(`/api/admin/topics/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ topic: newTopic, category: newCategory, clues: newClues })
+      body: JSON.stringify({ topic: newTopic, category: newCategory, aliases: editAliases })
     });
     showToast('Saved', 'success');
     await refresh();

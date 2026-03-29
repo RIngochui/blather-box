@@ -30,10 +30,10 @@
 
     <!-- ── Lobby ── -->
     <div id="lobby-screen" class="hidden">
-      <h2>Waiting for players…</h2>
+      <h2 id="lobby-title">Waiting for players…</h2>
       <p class="join-url">Join at <strong id="join-url-display"></strong></p>
       <div id="player-grid"></div>
-      <div class="host-controls">
+      <div class="host-controls" id="lobby-controls">
         <button class="btn btn-primary btn-lg" id="start-btn" disabled>Start Game</button>
       </div>
       <p class="text-muted mt-2" style="font-size:0.9rem;" id="player-count-hint">Need at least 2 players</p>
@@ -52,9 +52,10 @@
             <span class="pill-val" id="describer-name">—</span>
           </div>
           <div class="category-badge" id="category-display">Thing</div>
+          <div class="lap-badge hidden" id="lap-badge">⚡ 2× Points!</div>
         </div>
 
-        <div class="timer-ring">
+        <div class="timer-ring" id="timer-ring">
           <svg viewBox="0 0 80 80" width="80" height="80">
             <circle class="track" cx="40" cy="40" r="35"/>
             <circle class="fill" id="timer-arc" cx="40" cy="40" r="35"/>
@@ -63,13 +64,21 @@
         </div>
       </div>
 
-      <div class="clue-stage" id="clue-stage">
-        <div class="clue-number" id="clue-number">Clue 1</div>
-        <div class="clue-text" id="clue-text">
-          <span class="starter" id="clue-starter"></span>
-          <span class="response" id="clue-response"></span>
+      <div class="round-body">
+        <div class="clue-stage" id="clue-stage">
+          <div class="clue-number" id="clue-number">Waiting for first clue…</div>
+          <div class="clue-text" id="clue-text">
+            <span class="starter" id="clue-starter"></span>
+            <span class="response" id="clue-response"></span>
+          </div>
+          <div class="clue-dots" id="clue-dots"></div>
         </div>
-        <div class="clue-dots" id="clue-dots"></div>
+
+        <!-- Guesses stream -->
+        <div class="guesses-panel" id="guesses-panel">
+          <div class="guesses-panel-label">Guesses</div>
+          <div class="guesses-stream" id="guesses-stream"></div>
+        </div>
       </div>
 
       <!-- Answer reveal overlay -->
@@ -79,7 +88,6 @@
       </div>
 
       <div class="host-controls mt-3" id="round-controls">
-        <button class="btn btn-ghost" id="next-clue-btn">Next Clue →</button>
         <button class="btn btn-red btn-sm" id="end-game-btn">End Game</button>
       </div>
     </div>

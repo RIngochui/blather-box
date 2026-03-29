@@ -16,8 +16,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Routes
 app.use('/api/admin', require('./routes/admin'));
-app.use('/api/submit', require('./routes/submit').router);
-app.use('/api/game', require('./routes/game'));
+app.use('/api/submit', require('./routes/submit'));
 
 // Page routes
 app.get('/host', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'host.html')));
@@ -70,25 +69,32 @@ io.on('connection', (socket) => {
       socket.emit('game-error', { message: 'Need at least 2 players to start.' });
       return;
     }
-    beginRound(room, io);
+    room.playerCountAtStart = room.players.length;
+    beginTopicPick(room, io);
   });
 
-  // HOST/DESCRIBER: Advance to next clue
-  socket.on('next-clue', () => {
+  // DESCRIBER: Pick a topic from choices
+  socket.on('pick-topic', ({ topicId }) => {
+    const room = gm.getRoomBySocket(socket.id);
+    if (!room || room.state !== 'picking') return;
+    if (socket.id !== room.pendingDescriberId) return;
+    beginRound(room, io, topicId);
+  });
+
+  // DESCRIBER: Submit a built clue
+  socket.on('submit-clue', ({ starter, response }) => {
     const room = gm.getRoomBySocket(socket.id);
     if (!room || room.state !== 'round') return;
-    // Only host or describer can advance clues
-    if (socket.id !== room.hostSocketId && socket.id !== room.describerId) return;
+    if (socket.id !== room.describerId) return;
+    if (!starter || !response || !response.trim()) return;
 
-    const clue = gm.nextClue(room);
-    if (clue) {
-      io.to(room.code).emit('clue-revealed', {
-        clueIndex: room.currentClueIndex,
-        clue: { starter: clue.starter, response: clue.response }
-      });
-    } else {
-      // No more clues — time still ticking
-      io.to(room.code).emit('no-more-clues');
+    const { clue, clueIndex } = gm.submitClue(room, starter, response.trim());
+    io.to(room.code).emit('clue-revealed', { clueIndex, clue });
+
+    // First clue → stop pick timer, start guess timer
+    if (!room.firstClueSubmitted) {
+      room.firstClueSubmitted = true;
+      startGuessTimer(room, io);
     }
   });
 
@@ -96,6 +102,7 @@ io.on('connection', (socket) => {
   socket.on('submit-guess', ({ guess }) => {
     const room = gm.getRoomBySocket(socket.id);
     if (!room || room.state !== 'round') return;
+    if (!room.firstClueSubmitted) return; // can't guess before first clue
     // Describer can't guess
     if (socket.id === room.describerId) return;
 
@@ -113,13 +120,15 @@ io.on('connection', (socket) => {
         topic: room.currentTopic.topic,
         guesserPoints: result.guesserPoints,
         describerPoints: result.describerPoints,
-        describerName: result.describer ? result.describer.name : ''
+        describerName: result.describer ? result.describer.name : '',
+        guesserStreak: result.guesser ? result.guesser.streak : 0,
       });
 
       setTimeout(() => sendScores(room, io), 1500);
     } else {
-      // Wrong — notify only the guesser
+      // Wrong — private feedback to guesser, broadcast guess to room
       socket.emit('wrong-guess', { guess });
+      io.to(room.code).emit('guess-made', { guesser: player.name, guess });
     }
   });
 
@@ -127,7 +136,7 @@ io.on('connection', (socket) => {
   socket.on('next-round', () => {
     const room = gm.getRoomBySocket(socket.id);
     if (!room || room.hostSocketId !== socket.id) return;
-    beginRound(room, io);
+    beginTopicPick(room, io);
   });
 
   // HOST: End the game
@@ -161,69 +170,109 @@ io.on('connection', (socket) => {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function beginRound(room, io) {
+function beginTopicPick(room, io) {
   if (room.timer) clearInterval(room.timer);
 
-  const result = gm.startRound(room);
+  const { describer, choices } = gm.prepareTopicChoices(room);
+  if (!describer) {
+    io.to(room.code).emit('game-error', { message: 'No players in room' });
+    return;
+  }
+
+  // Describer only: see topic choices
+  io.to(describer.socketId).emit('topic-choices', {
+    choices: choices.map(t => ({ id: t.id, topic: t.topic, category: t.category }))
+  });
+
+  // Everyone else: show waiting state
+  for (const player of room.players) {
+    if (player.socketId !== describer.socketId) {
+      io.to(player.socketId).emit('round-picking', { describerName: describer.name });
+    }
+  }
+  io.to(room.hostSocketId).emit('round-picking', { describerName: describer.name });
+}
+
+function beginRound(room, io, topicId) {
+  if (room.timer)     clearInterval(room.timer);
+  if (room.pickTimer) clearInterval(room.pickTimer);
+
+  const result = gm.startRound(room, topicId);
   if (result.error) {
     io.to(room.code).emit('game-error', { message: result.error });
     return;
   }
 
-  const { topic, describer, activeClues, category } = result;
-  const firstClue = activeClues[0];
+  const { topic, describer, starters, categoryWords, category, firstStarter, lap } = result;
 
-  // Send describer their private info
+  // Describer: topic, starters, randomised first starter, lap
   io.to(describer.socketId).emit('round-start', {
     role: 'describer',
     topic: topic.topic,
     category,
-    clues: activeClues,
-    currentClueIndex: 0
+    starters,
+    categoryWords,
+    firstStarter,
+    lap,
   });
 
-  // Send guessers their info (no topic)
+  // Guessers: category only
   for (const player of room.players) {
     if (player.socketId !== describer.socketId) {
       io.to(player.socketId).emit('round-start', {
         role: 'guesser',
         category,
         describerName: describer.name,
-        currentClueIndex: 0
+        lap,
       });
     }
   }
 
-  // Tell host full info
+  // Host: full info
   io.to(room.hostSocketId).emit('round-start', {
     role: 'host',
     topic: topic.topic,
     category,
     describerName: describer.name,
-    clue: firstClue ? { starter: firstClue.starter, response: firstClue.response } : null,
-    clueIndex: 0,
-    totalClues: activeClues.length,
-    roundNumber: room.currentRound
+    totalClues: starters.length,
+    roundNumber: room.currentRound,
+    lap,
   });
 
-  // Broadcast first clue to room
-  if (firstClue) {
-    io.to(room.code).emit('clue-revealed', {
-      clueIndex: 0,
-      clue: { starter: firstClue.starter, response: firstClue.response }
-    });
-  }
+  // Pick timer: describer only sees countdown (60 s to send first clue)
+  room.pickTimeLeft = gm.PICK_DURATION;
+  room.pickTimer = setInterval(() => {
+    room.pickTimeLeft--;
+    io.to(describer.socketId).emit('pick-tick', { timeLeft: room.pickTimeLeft });
 
-  // Start countdown timer
-  room.timeLeft = gm.ROUND_DURATION;
+    if (room.pickTimeLeft <= 0) {
+      clearInterval(room.pickTimer);
+      room.pickTimer = null;
+      gm.endRound(room);
+      gm.resetAllStreaks(room);
+      io.to(room.code).emit('round-end', {
+        reason: 'pick-timeout',
+        topic: room.currentTopic.topic
+      });
+      setTimeout(() => sendScores(room, io), 1500);
+    }
+  }, 1000);
+}
+
+function startGuessTimer(room, io) {
+  if (room.pickTimer) { clearInterval(room.pickTimer); room.pickTimer = null; }
+  room.guessTimeLeft = gm.GUESS_DURATION;
+  io.to(room.code).emit('guess-phase-start', { timeLeft: gm.GUESS_DURATION });
+
   room.timer = setInterval(() => {
-    room.timeLeft--;
-    io.to(room.code).emit('timer-tick', { timeLeft: room.timeLeft });
+    room.guessTimeLeft--;
+    io.to(room.code).emit('timer-tick', { timeLeft: room.guessTimeLeft });
 
-    if (room.timeLeft <= 0) {
+    if (room.guessTimeLeft <= 0) {
       clearInterval(room.timer);
       room.timer = null;
       gm.endRound(room);
+      gm.resetAllStreaks(room);
       io.to(room.code).emit('round-end', {
         reason: 'timeout',
         topic: room.currentTopic.topic
@@ -235,11 +284,26 @@ function beginRound(room, io) {
 
 function sendScores(room, io) {
   const sorted = [...room.players].sort((a, b) => b.score - a.score);
+  const isLastRound = gm.shouldGameEnd(room);
   io.to(room.code).emit('show-scores', {
-    players: sorted.map(p => ({ name: p.name, score: p.score })),
-    roundNumber: room.currentRound
+    players: sorted.map(p => ({ name: p.name, score: p.score, streak: p.streak || 0 })),
+    roundNumber: room.currentRound,
+    isLastRound,
   });
   room.state = 'scoring';
+
+  if (isLastRound) {
+    const roomCode = room.code;
+    setTimeout(() => {
+      const r = gm.getRoom(roomCode);
+      if (!r) return;
+      const sortedFinal = [...r.players].sort((a, b) => b.score - a.score);
+      io.to(roomCode).emit('game-end', {
+        players: sortedFinal.map(p => ({ name: p.name, score: p.score }))
+      });
+      gm.deleteRoom(roomCode);
+    }, 5000);
+  }
 }
 
 // ─── Start server ─────────────────────────────────────────────────────────────

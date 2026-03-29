@@ -2,7 +2,7 @@
 
 const socket = io();
 
-const TOTAL_TIME = 60;
+const TOTAL_TIME = 180;
 let currentClueIndex = 0;
 let totalClues = 0;
 let timerInterval = null;
@@ -29,6 +29,8 @@ const joinUrlDisplay    = document.getElementById('join-url-display');
 const playerGrid        = document.getElementById('player-grid');
 const startBtn          = document.getElementById('start-btn');
 const playerCountHint   = document.getElementById('player-count-hint');
+const lobbyTitle        = document.getElementById('lobby-title');
+const lobbyControls     = document.getElementById('lobby-controls');
 
 const roundNumber       = document.getElementById('round-number');
 const describerName     = document.getElementById('describer-name');
@@ -40,7 +42,7 @@ const clueResponse      = document.getElementById('clue-response');
 const clueDots          = document.getElementById('clue-dots');
 const timerArc          = document.getElementById('timer-arc');
 const timerText         = document.getElementById('timer-text');
-const nextClueBtn       = document.getElementById('next-clue-btn');
+const guessesStream     = document.getElementById('guesses-stream');
 const answerRevealArea  = document.getElementById('answer-reveal-area');
 const answerRevealWord  = document.getElementById('answer-reveal-word');
 const roundEndReason    = document.getElementById('round-end-reason');
@@ -55,6 +57,8 @@ socket.on('room-created', ({ code }) => {
   roomCodeVal.textContent = code;
   roomCodeBar.style.display = 'flex';
   joinUrlDisplay.textContent = `${location.host}/join`;
+  lobbyTitle.textContent = 'Waiting for players…';
+  lobbyControls.style.display = '';
   showScreen('lobby');
 });
 
@@ -76,28 +80,46 @@ socket.on('game-error', ({ message }) => {
   alert(message);
 });
 
-socket.on('round-start', ({ role, topic, category, describerName: dn, clue, clueIndex, totalClues: tc, roundNumber: rn }) => {
+socket.on('round-picking', ({ describerName }) => {
+  lobbyTitle.textContent = `${describerName} is picking a topic…`;
+  lobbyControls.style.display = 'none';
+  playerCountHint.textContent = '';
+  showScreen('lobby');
+});
+
+socket.on('round-start', ({ role, topic, category, describerName: dn, totalClues: tc, roundNumber: rn, lap }) => {
   if (role !== 'host') return;
 
-  currentClueIndex = clueIndex;
+  currentClueIndex = -1;
   totalClues = tc;
   roundNumber.textContent = rn;
   describerName.textContent = dn;
   categoryDisplay.textContent = category;
 
-  // Reset answer reveal
+  // Lap badge
+  document.getElementById('lap-badge').classList.toggle('hidden', lap !== 2);
+
+  // Reset
   answerRevealArea.classList.add('hidden');
   clueStage.classList.remove('hidden');
-  nextClueBtn.disabled = false;
+  clueNumber.textContent = 'Waiting for first clue…';
+  clueStarter.textContent = '';
+  clueResponse.textContent = '';
+  guessesStream.innerHTML = '';
+  document.getElementById('round-controls').style.display = '';
 
-  // Render clue dots
-  renderClueDots(tc, 0);
-
-  // Show first clue (will also come via clue-revealed event)
-  // Already emitted from server
-
+  renderClueDots(tc, -1);
   showScreen('round');
+
+  // Timer hidden until first clue is submitted (guess phase starts)
   resetTimer();
+  document.getElementById('timer-ring').style.opacity = '0';
+});
+
+socket.on('guess-phase-start', ({ timeLeft }) => {
+  currentTimeLeft = timeLeft;
+  updateTimerDisplay(timeLeft);
+  document.getElementById('timer-ring').style.opacity = '1';
 });
 
 socket.on('clue-revealed', ({ clueIndex, clue }) => {
@@ -116,8 +138,17 @@ socket.on('clue-revealed', ({ clueIndex, clue }) => {
 });
 
 socket.on('no-more-clues', () => {
-  nextClueBtn.disabled = true;
   clueNumber.textContent = 'All clues revealed!';
+});
+
+socket.on('guess-made', ({ guesser, guess }) => {
+  const item = document.createElement('div');
+  item.className = 'guess-item anim-slide-in';
+  item.innerHTML = `<span class="guess-player">${esc(guesser)}</span><span class="guess-text">${esc(guess)}</span>`;
+  guessesStream.prepend(item);
+  while (guessesStream.children.length > 10) {
+    guessesStream.removeChild(guessesStream.lastChild);
+  }
 });
 
 socket.on('timer-tick', ({ timeLeft }) => {
@@ -128,18 +159,26 @@ socket.on('timer-tick', ({ timeLeft }) => {
 socket.on('correct-guess', ({ guesser, topic, guesserPoints, describerPoints, describerName: dn }) => {
   showCorrectFlash();
   showRoundEnd(`✓ ${guesser} got it!`, topic);
-  nextClueBtn.disabled = true;
 });
 
 socket.on('round-end', ({ reason, topic }) => {
-  const msg = reason === 'timeout' ? '⏰ Time\'s up!' : 'Round over';
+  const msg = reason === 'pick-timeout' ? '⏳ Describer timed out!'
+            : reason === 'timeout'      ? '⏰ Time\'s up!'
+            : 'Round over';
   showRoundEnd(msg, topic);
-  nextClueBtn.disabled = true;
 });
 
-socket.on('show-scores', ({ players, roundNumber: rn }) => {
+socket.on('show-scores', ({ players, roundNumber: rn, isLastRound }) => {
   scoresTitle.textContent = `After Round ${rn}`;
   renderScoreList(scoreList, players);
+  const nextRoundBtn = document.getElementById('next-round-btn');
+  if (isLastRound) {
+    nextRoundBtn.disabled = true;
+    nextRoundBtn.textContent = 'Final round — ending…';
+  } else {
+    nextRoundBtn.disabled = false;
+    nextRoundBtn.textContent = 'Next Round';
+  }
   showScreen('scores');
 });
 
@@ -161,10 +200,6 @@ document.getElementById('create-btn').addEventListener('click', () => {
 
 startBtn.addEventListener('click', () => {
   socket.emit('start-game');
-});
-
-nextClueBtn.addEventListener('click', () => {
-  socket.emit('next-clue');
 });
 
 document.getElementById('next-round-btn').addEventListener('click', () => {
@@ -246,9 +281,10 @@ function renderScoreList(container, players) {
     row.style.setProperty('--i', i);
     const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
     const rankSymbol = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+    const streakBadge = (p.streak || 0) >= 2 ? ` <span style="font-size:0.85rem;color:var(--yellow);">🔥 ${p.streak}</span>` : '';
     row.innerHTML = `
       <div class="score-rank ${rankClass}">${rankSymbol}</div>
-      <div class="score-name">${esc(p.name)}</div>
+      <div class="score-name">${esc(p.name)}${streakBadge}</div>
       <div class="score-pts">${p.score} pts</div>
     `;
     container.appendChild(row);
