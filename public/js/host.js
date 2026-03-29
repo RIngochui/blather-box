@@ -7,6 +7,7 @@ let currentClueIndex = 0;
 let totalClues = 0;
 let timerInterval = null;
 let currentTimeLeft = TOTAL_TIME;
+let timerVisible = false;
 
 // ── Screens ──────────────────────────────────────────────────────────────────
 const screens = {
@@ -37,8 +38,7 @@ const describerName     = document.getElementById('describer-name');
 const categoryDisplay   = document.getElementById('category-display');
 const clueStage         = document.getElementById('clue-stage');
 const clueNumber        = document.getElementById('clue-number');
-const clueStarter       = document.getElementById('clue-starter');
-const clueResponse      = document.getElementById('clue-response');
+const clueHistoryList   = document.getElementById('clue-history-list');
 const clueDots          = document.getElementById('clue-dots');
 const timerArc          = document.getElementById('timer-arc');
 const timerText         = document.getElementById('timer-text');
@@ -100,41 +100,50 @@ socket.on('round-start', ({ role, topic, category, describerName: dn, totalClues
   document.getElementById('lap-badge').classList.toggle('hidden', lap !== 2);
 
   // Reset
+  timerVisible = false;
   answerRevealArea.classList.add('hidden');
   clueStage.classList.remove('hidden');
   clueNumber.textContent = 'Waiting for first clue…';
-  clueStarter.textContent = '';
-  clueResponse.textContent = '';
+  clueHistoryList.innerHTML = '';
   guessesStream.innerHTML = '';
   document.getElementById('round-controls').style.display = '';
 
   renderClueDots(tc, -1);
   showScreen('round');
 
-  // Timer hidden until first clue is submitted (guess phase starts)
   resetTimer();
   document.getElementById('timer-ring').style.opacity = '0';
 });
 
 socket.on('guess-phase-start', ({ timeLeft }) => {
-  currentTimeLeft = timeLeft;
-  updateTimerDisplay(timeLeft);
-  document.getElementById('timer-ring').style.opacity = '1';
+  if (!timerVisible) {
+    timerVisible = true;
+    currentTimeLeft = timeLeft;
+    updateTimerDisplay(timeLeft);
+    document.getElementById('timer-ring').style.opacity = '1';
+  }
 });
 
 socket.on('clue-revealed', ({ clueIndex, clue }) => {
   currentClueIndex = clueIndex;
-  clueNumber.textContent = `Clue ${clueIndex + 1} of ${totalClues}`;
-  clueStarter.textContent = clue.starter + '… ';
-  clueResponse.textContent = clue.response;
+  clueNumber.textContent = `Clue ${clueIndex + 1}`;
 
-  // Animate in
-  const clueTextEl = document.getElementById('clue-text');
-  clueTextEl.classList.remove('anim-slide-in');
-  void clueTextEl.offsetWidth;
-  clueTextEl.classList.add('anim-slide-in');
+  // Add to history — newest on top, previous dimmed
+  clueHistoryList.querySelectorAll('.clue-history-item').forEach(el => el.classList.remove('latest'));
+  const item = document.createElement('div');
+  item.className = 'clue-history-item latest anim-slide-in';
+  item.innerHTML = `<span class="chi-starter">${esc(clue.starter)}… </span><span class="chi-response">${esc(clue.response)}</span>`;
+  clueHistoryList.prepend(item);
 
   updateClueDots(clueIndex);
+
+  // First clue: reveal the timer at exactly 180, block timer-tick from changing it before visible
+  if (clueIndex === 0 && !timerVisible) {
+    timerVisible = true;
+    currentTimeLeft = TOTAL_TIME;
+    updateTimerDisplay(TOTAL_TIME);
+    document.getElementById('timer-ring').style.opacity = '1';
+  }
 });
 
 socket.on('no-more-clues', () => {
@@ -152,6 +161,7 @@ socket.on('guess-made', ({ guesser, guess }) => {
 });
 
 socket.on('timer-tick', ({ timeLeft }) => {
+  if (!timerVisible) return;
   currentTimeLeft = timeLeft;
   updateTimerDisplay(timeLeft);
 });

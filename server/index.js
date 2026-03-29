@@ -203,7 +203,7 @@ function beginRound(room, io, topicId) {
     return;
   }
 
-  const { topic, describer, starters, categoryWords, category, firstStarter, lap } = result;
+  const { topic, describer, starters, category, firstStarter, lap } = result;
 
   // Describer: topic, starters, randomised first starter, lap
   io.to(describer.socketId).emit('round-start', {
@@ -241,9 +241,11 @@ function beginRound(room, io, topicId) {
 
   // Pick timer: describer only sees countdown (60 s to send first clue)
   room.pickTimeLeft = gm.PICK_DURATION;
+  // Emit immediately so the display starts ticking without a 1-second delay
+  io.to(room.describerId).emit('pick-tick', { timeLeft: room.pickTimeLeft });
   room.pickTimer = setInterval(() => {
     room.pickTimeLeft--;
-    io.to(describer.socketId).emit('pick-tick', { timeLeft: room.pickTimeLeft });
+    io.to(room.describerId).emit('pick-tick', { timeLeft: room.pickTimeLeft });
 
     if (room.pickTimeLeft <= 0) {
       clearInterval(room.pickTimer);

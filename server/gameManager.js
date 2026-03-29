@@ -1,6 +1,5 @@
 const { topicQueries } = require('./db');
 const CATEGORY_STARTERS = require('./categoryStarters');
-const CATEGORY_WORDS = require('./categoryStarters').CATEGORY_WORDS;
 
 // In-memory room state
 const rooms = new Map();
@@ -144,10 +143,9 @@ function startRound(room, topicId) {
   room.lap = (room.playerCountAtStart > 0 && room.currentRound > room.playerCountAtStart) ? 2 : 1;
 
   const starters = CATEGORY_STARTERS[topic.category] || [];
-  const categoryWords = CATEGORY_WORDS[topic.category] || [];
   const firstStarter = starters[Math.floor(Math.random() * starters.length)] || starters[0];
 
-  return { topic, describer, starters, categoryWords, category: topic.category, firstStarter, lap: room.lap };
+  return { topic, describer, starters, category: topic.category, firstStarter, lap: room.lap };
 }
 
 function submitClue(room, starter, response) {

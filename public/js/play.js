@@ -18,6 +18,7 @@ let selectedStarterIndex = null;
 let builtWords = [];
 let firstClueSubmitted = false;
 let firstStarterText = '';
+let pickTimerInterval = null;
 
 const PRESET_WORDS = [
   'similar to', 'like', 'a type of', 'used for', 'found in',
@@ -25,8 +26,88 @@ const PRESET_WORDS = [
   'made of', 'part of', 'opposite of', 'bigger than', 'smaller than',
   'often near', 'sometimes called'
 ];
+
+const CATEGORY_WORDS = {
+  'Thing': [
+    'small', 'large', 'tiny', 'giant', 'round', 'flat', 'long', 'thin',
+    'sharp', 'soft', 'hard', 'heavy', 'light', 'hollow', 'solid', 'transparent',
+    'metal', 'plastic', 'wooden', 'glass', 'rubber', 'electric', 'digital',
+    'ancient', 'modern', 'common', 'rare', 'portable', 'mechanical',
+    'tool', 'machine', 'device', 'container', 'weapon', 'toy', 'instrument',
+    'furniture', 'vehicle', 'symbol', 'surface', 'handle', 'button', 'screen',
+    'liquid', 'powder', 'fabric', 'wire', 'tube', 'box', 'bag', 'ring',
+  ],
+  'Person': [
+    'famous', 'fictional', 'real', 'historical', 'modern', 'ancient',
+    'powerful', 'controversial', 'beloved', 'feared', 'respected', 'talented',
+    'old', 'young', 'rich', 'poor', 'brave', 'smart', 'creative', 'evil', 'good',
+    'actor', 'actress', 'singer', 'musician', 'artist', 'painter', 'writer',
+    'scientist', 'inventor', 'explorer', 'politician', 'president', 'king', 'queen',
+    'athlete', 'soldier', 'hero', 'villain', 'leader', 'comedian', 'director',
+    'philosopher', 'doctor', 'astronaut', 'spy', 'warrior', 'rebel',
+    'American', 'British', 'French', 'Chinese', 'Japanese', 'German', 'Italian',
+  ],
+  'Place': [
+    'famous', 'large', 'small', 'ancient', 'modern', 'historic', 'remote',
+    'tropical', 'cold', 'hot', 'dry', 'wet', 'mountainous', 'flat', 'underground',
+    'underwater', 'urban', 'rural', 'sacred', 'dangerous', 'peaceful',
+    'country', 'city', 'town', 'island', 'continent', 'mountain', 'volcano',
+    'ocean', 'sea', 'river', 'lake', 'desert', 'forest', 'jungle', 'cave',
+    'castle', 'tower', 'temple', 'stadium', 'beach', 'park', 'wall', 'bridge',
+    'north', 'south', 'east', 'west', 'Europe', 'Asia', 'Africa', 'America',
+  ],
+  'Food/Drink': [
+    'sweet', 'sour', 'spicy', 'bitter', 'salty', 'savory', 'bland',
+    'hot', 'cold', 'warm', 'raw', 'cooked', 'fried', 'baked', 'grilled',
+    'crunchy', 'soft', 'creamy', 'liquid', 'thick', 'thin', 'rich', 'light',
+    'popular', 'traditional', 'exotic', 'rare', 'expensive', 'healthy',
+    'fruit', 'vegetable', 'meat', 'fish', 'grain', 'bread', 'sauce', 'soup',
+    'dessert', 'snack', 'drink', 'tea', 'coffee', 'alcohol', 'juice', 'milk',
+    'spice', 'cheese', 'egg', 'noodle', 'rice', 'pasta', 'chocolate', 'sugar',
+    'ingredient', 'flavour', 'aroma', 'texture', 'colour',
+  ],
+  'Activity': [
+    'indoor', 'outdoor', 'competitive', 'solo', 'social', 'team',
+    'physical', 'mental', 'creative', 'dangerous', 'safe', 'relaxing',
+    'extreme', 'professional', 'casual', 'popular', 'rare', 'expensive',
+    'fast', 'slow', 'technical', 'artistic', 'seasonal', 'underwater',
+    'sport', 'game', 'hobby', 'exercise', 'skill', 'competition', 'challenge',
+    'performance', 'art', 'music', 'dance', 'race', 'match', 'climb',
+    'water', 'air', 'land', 'snow', 'ice', 'ball', 'equipment', 'body',
+    'team', 'partner', 'audience', 'stage', 'arena', 'outdoors', 'nature',
+  ],
+  'Movie/Show': [
+    'animated', 'live-action', 'classic', 'modern', 'old', 'new',
+    'popular', 'famous', 'award-winning', 'fictional', 'based-on', 'true',
+    'funny', 'scary', 'sad', 'dark', 'violent', 'family-friendly',
+    'American', 'Japanese', 'British', 'Korean', 'French',
+    'film', 'movie', 'series', 'show', 'sequel', 'prequel', 'remake', 'reboot',
+    'comedy', 'drama', 'thriller', 'horror', 'action', 'fantasy', 'sci-fi',
+    'romance', 'documentary', 'animation', 'anime', 'superhero', 'musical',
+    'character', 'hero', 'villain', 'robot', 'alien', 'monster', 'wizard',
+    'universe', 'story', 'adventure', 'war', 'crime', 'mystery', 'space',
+  ],
+  'General': [
+    'good', 'bad', 'big', 'small', 'large', 'tiny', 'simple', 'complex',
+    'basic', 'advanced', 'common', 'rare', 'normal', 'unusual', 'unique',
+    'important', 'minor', 'useful', 'useless', 'clear', 'strong', 'weak',
+    'flexible', 'rigid', 'fast', 'slow', 'hot', 'cold', 'loud', 'quiet',
+    'thing', 'object', 'item', 'part', 'feature', 'system', 'concept',
+    'idea', 'example', 'type', 'kind', 'group', 'world', 'country',
+  ],
+};
+
 let wordBankWords = [];
 let presetWordCount = 0;
+let currentCategoryWords = [];
+
+function sampleWordBank(allWordBankWords) {
+  currentCategoryWords = allWordBankWords;
+  const size = Math.max(6, Math.floor(allWordBankWords.length * 0.25));
+  const shuffled = [...allWordBankWords].sort(() => Math.random() - 0.5);
+  wordBankWords = shuffled.slice(0, size);
+  presetWordCount = wordBankWords.length;
+}
 
 // ── Screen helpers ────────────────────────────────────────────────────────────
 const allScreens = [
@@ -128,7 +209,10 @@ socket.on('round-start', (data) => {
     firstClueSubmitted = false;
     firstStarterText = data.firstStarter || starters[0] || '';
     builtWords = [];
-    wordBankWords = [...PRESET_WORDS, ...(data.categoryWords || [])];
+    const allCatWords = CATEGORY_WORDS[data.category] || [];
+    const allGeneralWords = CATEGORY_WORDS['General'] || [];
+    const allWordBankWords = allCatWords.concat(allGeneralWords);
+    sampleWordBank(allWordBankWords);
     presetWordCount = wordBankWords.length;
 
     descTopicWord.textContent = data.topic;
@@ -146,10 +230,25 @@ socket.on('round-start', (data) => {
     renderWordBank();
     renderStarters();
 
-    // Show pick timer
-    document.getElementById('pick-timer-val').textContent = 60;
+    // Show pick timer — run client-side countdown
+    if (pickTimerInterval) clearInterval(pickTimerInterval);
+    let pickSecsLeft = 60;
+    document.getElementById('pick-timer-val').textContent = pickSecsLeft;
     document.getElementById('pick-timer-area').classList.remove('hidden');
     document.getElementById('pick-timer-area').classList.remove('urgent');
+    pickTimerInterval = setInterval(() => {
+      pickSecsLeft--;
+      document.getElementById('pick-timer-val').textContent = pickSecsLeft;
+      if (pickSecsLeft <= 10) document.getElementById('pick-timer-area').classList.add('urgent');
+      if (pickSecsLeft <= 0) {
+        clearInterval(pickTimerInterval);
+        pickTimerInterval = null;
+        // Auto-submit whatever the describer has built so far
+        if (builtWords.length > 0 && selectedStarterIndex !== null) {
+          submitBuiltClue();
+        }
+      }
+    }, 1000);
 
     showScreen('describer-screen');
 
@@ -167,13 +266,12 @@ socket.on('round-start', (data) => {
   }
 });
 
-socket.on('pick-tick', ({ timeLeft }) => {
-  document.getElementById('pick-timer-val').textContent = timeLeft;
-  if (timeLeft <= 10) document.getElementById('pick-timer-area').classList.add('urgent');
+socket.on('pick-tick', () => {
+  // Client-side interval handles display; server tick is just a heartbeat
 });
 
 socket.on('guess-phase-start', () => {
-  // Pick timer is done; hide it for describer
+  if (pickTimerInterval) { clearInterval(pickTimerInterval); pickTimerInterval = null; }
   document.getElementById('pick-timer-area').classList.add('hidden');
 });
 
@@ -190,11 +288,13 @@ socket.on('clue-revealed', ({ clueIndex, clue }) => {
       document.getElementById('pick-timer-area').classList.add('hidden');
     }
 
-    // Reset compose
+    // Reset compose and refresh word bank
     builtWords = [];
     selectedStarterIndex = null;
     composeArea.classList.add('hidden');
+    sampleWordBank(currentCategoryWords);
     renderBuiltResponse();
+    renderWordBank();
     renderStarters();
 
   } else if (myRole === 'guesser') {
@@ -254,6 +354,7 @@ socket.on('correct-guess', ({ guesser, topic, guesserPoints, describerPoints, gu
 });
 
 socket.on('round-end', ({ reason, topic }) => {
+  if (pickTimerInterval) { clearInterval(pickTimerInterval); pickTimerInterval = null; }
   document.getElementById('pick-timer-area').classList.add('hidden');
   if (reason === 'pick-timeout') {
     roundEndTitle.textContent = myRole === 'describer' ? 'Time\'s up! Reveal a clue faster!' : 'Describer ran out of time!';
@@ -395,6 +496,11 @@ clearLastWordBtn.addEventListener('click', () => {
 clearAllBtn.addEventListener('click', () => {
   builtWords = [];
   renderBuiltResponse();
+});
+
+document.getElementById('refresh-word-bank-btn').addEventListener('click', () => {
+  sampleWordBank(currentCategoryWords);
+  renderWordBank();
 });
 
 descRevealClueBtn.addEventListener('click', submitBuiltClue);

@@ -232,12 +232,12 @@ body.host-screen {
 /* Clue display */
 .clue-stage {
   flex: 1;
-  min-height: 140px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  min-width: 0;
 }
 
 .clue-number {
@@ -248,14 +248,33 @@ body.host-screen {
   margin-bottom: 0.5rem;
 }
 
-.clue-text {
-  font-size: 2.8rem;
-  font-weight: 800;
-  line-height: 1.2;
-  color: var(--text);
+/* Clue history feed */
+.clue-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
 }
-.clue-text .starter { color: var(--muted); font-weight: 600; }
-.clue-text .response { color: var(--accent2); }
+.clue-history-item {
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.3;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  opacity: 0.4;
+  border: 1px solid transparent;
+}
+.clue-history-item.latest {
+  font-size: 1.8rem;
+  opacity: 1;
+  background: var(--surface);
+  border-color: var(--accent2);
+  padding: 0.5rem 0.75rem;
+}
+.clue-history-item .chi-starter { color: var(--muted); font-weight: 600; }
+.clue-history-item .chi-response { color: var(--accent2); }
 
 .clue-dots {
   display: flex;
