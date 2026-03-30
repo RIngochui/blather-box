@@ -62,8 +62,19 @@ function getRoomBySocket(socketId) {
 function addPlayer(code, socketId, name) {
   const room = rooms.get(code);
   if (!room) return { error: 'Room not found' };
-  if (room.state !== 'lobby') return { error: 'Game already in progress' };
   if ((name || '').toLowerCase() === 'admin') return { error: '"Admin" is a reserved name. Please choose another.' };
+
+  // Allow reconnect: if game is in progress and player name already exists, update their socket
+  if (room.state !== 'lobby') {
+    const existing = room.players.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      existing.socketId = socketId;
+      existing.id = socketId;
+      return { player: existing, room, reconnected: true };
+    }
+    return { error: 'Game already in progress' };
+  }
+
   if (room.players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
     return { error: 'Name already taken in this room' };
   }

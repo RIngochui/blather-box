@@ -8,6 +8,7 @@ let totalClues = 0;
 let timerInterval = null;
 let currentTimeLeft = TOTAL_TIME;
 let timerVisible = false;
+let hostTimerInterval = null;
 
 // ── Screens ──────────────────────────────────────────────────────────────────
 const screens = {
@@ -101,6 +102,7 @@ socket.on('round-start', ({ role, topic, category, describerName: dn, totalClues
 
   // Reset
   timerVisible = false;
+  if (hostTimerInterval) { clearInterval(hostTimerInterval); hostTimerInterval = null; }
   answerRevealArea.classList.add('hidden');
   clueStage.classList.remove('hidden');
   clueNumber.textContent = 'Waiting for first clue…';
@@ -137,12 +139,18 @@ socket.on('clue-revealed', ({ clueIndex, clue }) => {
 
   updateClueDots(clueIndex);
 
-  // First clue: reveal the timer at exactly 180, block timer-tick from changing it before visible
+  // First clue: start the 3-minute countdown from exactly 180
   if (clueIndex === 0 && !timerVisible) {
     timerVisible = true;
     currentTimeLeft = TOTAL_TIME;
     updateTimerDisplay(TOTAL_TIME);
     document.getElementById('timer-ring').style.opacity = '1';
+    if (hostTimerInterval) clearInterval(hostTimerInterval);
+    hostTimerInterval = setInterval(() => {
+      currentTimeLeft--;
+      updateTimerDisplay(currentTimeLeft);
+      if (currentTimeLeft <= 0) { clearInterval(hostTimerInterval); hostTimerInterval = null; }
+    }, 1000);
   }
 });
 
@@ -160,18 +168,18 @@ socket.on('guess-made', ({ guesser, guess }) => {
   }
 });
 
-socket.on('timer-tick', ({ timeLeft }) => {
-  if (!timerVisible) return;
-  currentTimeLeft = timeLeft;
-  updateTimerDisplay(timeLeft);
+socket.on('timer-tick', () => {
+  // Host uses its own client-side interval; server ticks are ignored
 });
 
 socket.on('correct-guess', ({ guesser, topic, guesserPoints, describerPoints, describerName: dn }) => {
+  if (hostTimerInterval) { clearInterval(hostTimerInterval); hostTimerInterval = null; }
   showCorrectFlash();
   showRoundEnd(`✓ ${guesser} got it!`, topic);
 });
 
 socket.on('round-end', ({ reason, topic }) => {
+  if (hostTimerInterval) { clearInterval(hostTimerInterval); hostTimerInterval = null; }
   const msg = reason === 'pick-timeout' ? '⏳ Describer timed out!'
             : reason === 'timeout'      ? '⏰ Time\'s up!'
             : 'Round over';

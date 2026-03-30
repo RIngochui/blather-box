@@ -97,8 +97,8 @@ const CATEGORY_WORDS = {
   ],
 };
 
-let wordBankWords = [];
-let presetWordCount = 0;
+let wordBankWords = [];   // current sampled category words
+let guessedWords = [];    // words added from guesses — persist through refreshes
 let currentCategoryWords = [];
 
 function sampleWordBank(allWordBankWords) {
@@ -106,7 +106,6 @@ function sampleWordBank(allWordBankWords) {
   const size = Math.max(6, Math.floor(allWordBankWords.length * 0.25));
   const shuffled = [...allWordBankWords].sort(() => Math.random() - 0.5);
   wordBankWords = shuffled.slice(0, size);
-  presetWordCount = wordBankWords.length;
 }
 
 // ── Screen helpers ────────────────────────────────────────────────────────────
@@ -209,11 +208,11 @@ socket.on('round-start', (data) => {
     firstClueSubmitted = false;
     firstStarterText = data.firstStarter || starters[0] || '';
     builtWords = [];
+    guessedWords = [];
     const allCatWords = CATEGORY_WORDS[data.category] || [];
     const allGeneralWords = CATEGORY_WORDS['General'] || [];
     const allWordBankWords = allCatWords.concat(allGeneralWords);
     sampleWordBank(allWordBankWords);
-    presetWordCount = wordBankWords.length;
 
     descTopicWord.textContent = data.topic;
     descClueList.innerHTML = '';
@@ -257,12 +256,13 @@ socket.on('round-start', (data) => {
     guesserDescrName.textContent = data.describerName;
     guesserLatestClue.style.display = 'none';
     guessInput.value = '';
-    guessFeedback.textContent = '';
+    guessInput.disabled = true;
+    guessSubmitBtn.disabled = true;
+    guessFeedback.textContent = 'Waiting for first clue…';
     guessFeedback.className = 'guess-feedback';
     guessHistory.innerHTML = '';
     document.getElementById('guesser-lap-badge').classList.toggle('hidden', data.lap !== 2);
     showScreen('guesser-screen');
-    setTimeout(() => guessInput.focus(), 300);
   }
 });
 
@@ -298,6 +298,12 @@ socket.on('clue-revealed', ({ clueIndex, clue }) => {
     renderStarters();
 
   } else if (myRole === 'guesser') {
+    if (clueIndex === 0) {
+      guessInput.disabled = false;
+      guessSubmitBtn.disabled = false;
+      guessFeedback.textContent = '';
+      setTimeout(() => guessInput.focus(), 100);
+    }
     guesserLatestClue.style.display = '';
     guesserClueNum.textContent = `Clue ${clueIndex + 1}`;
     guesserClueStart.textContent = clue.starter + '… ';
@@ -457,9 +463,10 @@ function renderBuiltResponse() {
 
 function renderWordBank() {
   descWordBank.innerHTML = '';
-  wordBankWords.forEach((word, i) => {
+  const allWords = [...wordBankWords, ...guessedWords];
+  allWords.forEach((word, i) => {
     const chip = document.createElement('button');
-    chip.className = 'word-chip' + (i >= presetWordCount ? ' from-guess' : '');
+    chip.className = 'word-chip' + (i >= wordBankWords.length ? ' from-guess' : '');
     chip.textContent = word;
     chip.addEventListener('click', () => {
       builtWords.push(word);
@@ -470,22 +477,21 @@ function renderWordBank() {
 }
 
 function addGuessToWordBank(guess) {
+  const allExisting = [...wordBankWords, ...guessedWords].map(x => x.toLowerCase());
   const words = guess.trim().split(/\s+/);
   let changed = false;
   words.forEach(w => {
-    if (w && !wordBankWords.map(x => x.toLowerCase()).includes(w.toLowerCase())) {
-      wordBankWords.push(w);
+    if (w && !allExisting.includes(w.toLowerCase())) {
+      guessedWords.push(w);
       changed = true;
     }
   });
   const full = guess.trim();
-  if (words.length > 1 && !wordBankWords.map(x => x.toLowerCase()).includes(full.toLowerCase())) {
-    wordBankWords.push(full);
+  if (words.length > 1 && !allExisting.includes(full.toLowerCase())) {
+    guessedWords.push(full);
     changed = true;
   }
-  if (changed && !composeArea.classList.contains('hidden')) {
-    renderWordBank();
-  }
+  if (changed) renderWordBank();
 }
 
 clearLastWordBtn.addEventListener('click', () => {

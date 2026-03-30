@@ -53,12 +53,16 @@ io.on('connection', (socket) => {
       name: result.player.name,
       playerId: socket.id
     });
-    // Tell everyone in the room (including host) about the updated player list
-    io.to(upperCode).emit('player-joined', {
-      players: result.room.players.map(p => ({ name: p.name, score: p.score })),
-      newPlayer: result.player.name
-    });
-    console.log(`${name} joined room ${upperCode}`);
+    if (result.reconnected) {
+      console.log(`${name} reconnected to room ${upperCode}`);
+    } else {
+      // Tell everyone in the room (including host) about the updated player list
+      io.to(upperCode).emit('player-joined', {
+        players: result.room.players.map(p => ({ name: p.name, score: p.score })),
+        newPlayer: result.player.name
+      });
+      console.log(`${name} joined room ${upperCode}`);
+    }
   });
 
   // HOST: Start the game
